@@ -1,3 +1,4 @@
+import os
 import random
 import random as rnd
 
@@ -18,6 +19,7 @@ def generate(
         word_split,
         stroke_width=0,
         stroke_fill="#282828",
+        image_dir=None
 ):
     if orientation == 0:
         return _generate_horizontal_text(
@@ -31,6 +33,7 @@ def generate(
             word_split,
             stroke_width,
             stroke_fill,
+            image_dir
         )
     elif orientation == 1:
         return _generate_vertical_text(
@@ -43,57 +46,66 @@ def generate(
 
 def _generate_horizontal_text(
         text, font, text_color, font_size, space_width, character_spacing, fit, word_split,
-        stroke_width=0, stroke_fill="#282828"
+        stroke_width=0, stroke_fill="#282828", background_path=None
 ):
-    image_font = ImageFont.truetype(font=font, size=font_size)
-    space_width = int(image_font.getsize(" ")[0] * space_width)
-
-    splitted_text = []
-    for w in text.split(" "):
-        splitted_text.append(w)
-        splitted_text.append(" " if random.randint(0, 1) == 0 else "")
-    splitted_text.pop()
-
-    piece_widths = [
-        image_font.getsize(p)[0] if p != " " else space_width for p in splitted_text
-    ]
-    text_width = sum(piece_widths)
-    if not word_split:
-        text_width += character_spacing * (len(text) - 1)
-
-    text_height = max([image_font.getsize(p)[1] for p in splitted_text])
-
-    txt_img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
-    txt_mask = Image.new("RGB", (text_width, text_height), (0, 0, 0))
+    images = os.listdir(background_path)
+    txt_img = Image.open(
+        os.path.join(background_path, images[rnd.randint(0, len(images) - 1)])
+    )
 
     txt_img_draw = ImageDraw.Draw(txt_img)
-    txt_mask_draw = ImageDraw.Draw(txt_mask, mode="RGB")
-    txt_mask_draw.fontmode = "1"
 
-    is_get_random_color = random.randint(0, 20)
-    for i, p in enumerate(splitted_text):
-        fill_temp, stroke_fill_temp = random_color() if is_get_random_color == 1 else random_color(text_color, stroke_fill)
+    random_y_list = []
+    transcription_point_list = []
+    for i, p in enumerate(text):
+        fill_temp, stroke_fill_temp = ((0, 0, 0), (0, 0, 0))
+        image_font = ImageFont.truetype(font=font, size=txt_img.size[1] // random.randint(20, 30))
+        text_width, text_height = image_font.getsize(p)
+
+        count_try = 0
+        while True:
+            if count_try >= 10:
+                y1 = y2 = -1
+                break
+
+            y1 = random.randint(0, txt_img.size[1])
+            y2 = y1 + text_height
+            if y2 > txt_img.size[1]:
+                y1 -= text_height
+                y2 -= text_height
+
+            is_ok = True
+            for y1_exist, y2_exist in random_y_list:
+                if not set(range(y1, y2)).isdisjoint(set(range(y1_exist, y2_exist))):
+                    is_ok = False
+                    count_try += 1
+                    break
+
+            if is_ok:
+                random_y_list.append((y1, y2))
+                break
+
+        x1 = random.randint(0, txt_img.size[0])
+        x2 = x1 + text_width
+        if x2 > txt_img.size[0]:
+            x1 -= text_width
+            x2 -= text_width
+
+        if x1 < 0 or x2 > txt_img.size[0] or y1 < 0 or y2 > txt_img.size[1]:
+            continue
+
         txt_img_draw.text(
-            (sum(piece_widths[0:i]) + i * character_spacing * int(not word_split), 0),
+            (x1, y1),
             p,
             fill=fill_temp,
             font=image_font,
             stroke_width=stroke_width,
             stroke_fill=stroke_fill_temp,
         )
-        txt_mask_draw.text(
-            (sum(piece_widths[0:i]) + i * character_spacing * int(not word_split), 0),
-            p,
-            fill=((i + 1) // (255 * 255), (i + 1) // 255, (i + 1) % 255),
-            font=image_font,
-            stroke_width=stroke_width,
-            stroke_fill=stroke_fill_temp,
-        )
 
-    if fit:
-        return txt_img.crop(txt_img.getbbox()), txt_mask.crop(txt_img.getbbox())
-    else:
-        return txt_img, txt_mask
+        transcription_point_list.append({"transcription": p, "points": [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]})
+
+    return txt_img, transcription_point_list
 
 
 def _generate_vertical_text(
