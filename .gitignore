@@ -1,6 +1,5 @@
 temp.txt
 out/
-fonts
 !.keep
 app/logger/*
 !app/logger/logger.py
