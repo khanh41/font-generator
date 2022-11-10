@@ -1,6 +1,7 @@
 import os
 import random
 import random as rnd
+import uuid
 
 from PIL import Image, ImageFilter, ImageStat
 
@@ -50,12 +51,17 @@ class FakeTextDataGenerator(object):
         output_mask,
         word_split,
         image_dir,
-        stroke_width=0, 
+        stroke_width=0,
         stroke_fill="#282828",
-        image_mode="RGB", 
+        image_mode="RGB",
     ):
         image = None
         size = random.randint(28, size)
+        if size < 40:
+            blur = 0
+        elif size < 50 and blur == 2:
+            blur = 1
+
         margin_top, margin_left, margin_bottom, margin_right = margins
         horizontal_margin = margin_left + margin_right
         vertical_margin = margin_top + margin_bottom
@@ -78,7 +84,7 @@ class FakeTextDataGenerator(object):
                 character_spacing,
                 fit,
                 word_split,
-                stroke_width, 
+                stroke_width,
                 stroke_fill,
             )
         random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
@@ -180,7 +186,7 @@ class FakeTextDataGenerator(object):
         ##############################################################
         try:
             resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
-            background_img_st = ImageStat.Stat(background_img) 
+            background_img_st = ImageStat.Stat(background_img)
 
             resized_img_px_mean = sum(resized_img_st.mean[:2]) / 3
             background_img_px_mean = sum(background_img_st.mean) / 3
@@ -234,13 +240,13 @@ class FakeTextDataGenerator(object):
         )
         final_image = background_img.filter(gaussian_filter)
         final_mask = background_mask.filter(gaussian_filter)
-        
+
         ############################################
         # Change image mode (RGB, grayscale, etc.) #
         ############################################
-        
+
         final_image = final_image.convert(image_mode)
-        final_mask = final_mask.convert(image_mode) 
+        final_mask = final_mask.convert(image_mode)
 
         #####################################
         # Generate name for resulting image #
@@ -264,6 +270,11 @@ class FakeTextDataGenerator(object):
 
         # Save the image
         if out_dir is not None:
+            _id = str(uuid.uuid4())
+            image_name = _id + ".png"
+            with open(f"labels/{_id}.txt", 'w') as f:
+                f.write(f'{image_name}, \"{text}\"')
+
             final_image.save(os.path.join(out_dir, image_name))
             if output_mask == 1:
                 final_mask.save(os.path.join(out_dir, mask_name))

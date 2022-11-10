@@ -51,7 +51,7 @@ def _generate_horizontal_text(
     splitted_text = []
     for w in text.split(" "):
         splitted_text.append(w)
-        splitted_text.append(" " if random.randint(0, 1) == 0 else "")
+        splitted_text.append(" ")
     splitted_text.pop()
 
     piece_widths = [
@@ -61,7 +61,12 @@ def _generate_horizontal_text(
     if not word_split:
         text_width += character_spacing * (len(text) - 1)
 
-    text_height = max([image_font.getsize(p)[1] for p in splitted_text])
+    text_height = int(max([image_font.getsize(p)[1] for p in splitted_text]))
+    padding_y_start = int(text_height * 0.5)
+    text_height = int(text_height * 2)
+
+    padding_x_start = int(text_width * 0.125)
+    text_width = int(text_width * 1.25)
 
     txt_img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
     txt_mask = Image.new("RGB", (text_width, text_height), (0, 0, 0))
@@ -72,9 +77,10 @@ def _generate_horizontal_text(
 
     is_get_random_color = random.randint(0, 20)
     for i, p in enumerate(splitted_text):
-        fill_temp, stroke_fill_temp = random_color() if is_get_random_color == 1 else random_color(text_color, stroke_fill)
+        # fill_temp, stroke_fill_temp = random_color() if is_get_random_color == 1 else random_color(text_color, stroke_fill)
+        fill_temp, stroke_fill_temp = ((0, 0, 0), (0, 0, 0))
         txt_img_draw.text(
-            (sum(piece_widths[0:i]) + i * character_spacing * int(not word_split), 0),
+            (sum(piece_widths[0:i]) + i * character_spacing * int(not word_split)+padding_x_start, padding_y_start),
             p,
             fill=fill_temp,
             font=image_font,
